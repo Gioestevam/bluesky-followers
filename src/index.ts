@@ -52,4 +52,8 @@ const scheduleExpression = '0 0 0/24 * * *';
 
 const job = new CronJob(scheduleExpression, createPost);
 
-job.start();
+try {
+    job.start();
+} catch (e) {
+    console.error(e);
+}
