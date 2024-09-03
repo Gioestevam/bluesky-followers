@@ -4,11 +4,7 @@ import * as dotenv from 'dotenv';
 import * as admin from 'firebase-admin'
 import { getFirestore } from 'firebase-admin/firestore';
 
-const fs = require('node:fs');
-
 dotenv.config();
-
-const path = './src/counter.txt';
 
 const agent = new AtpAgent({
     service: 'https://bsky.social',
@@ -51,8 +47,6 @@ async function createPost() {
         text: `Estamos a ${counter.days} dias sem o esgoto do Twitter/X`
     });
 }
-
-createPost();
 
 const scheduleExpression = '0 0 0/24 * * *'; 
 
