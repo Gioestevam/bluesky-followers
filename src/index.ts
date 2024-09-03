@@ -1,6 +1,8 @@
 import { AtpAgent } from '@atproto/api';
 import { CronJob } from 'cron';
 import * as dotenv from 'dotenv';
+import * as admin from 'firebase-admin'
+import { getFirestore } from 'firebase-admin/firestore';
 
 const fs = require('node:fs');
 
@@ -12,36 +14,47 @@ const agent = new AtpAgent({
     service: 'https://bsky.social',
 })
 
-async function createOrReadCounterFile() {
-    if (!fs.existsSync(path)) {
-        let counterInitial = '1';
-        fs.writeFileSync(path, counterInitial);
+const serviceAccount = JSON.parse(
+    process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
+);
 
-        return counterInitial;
-    }
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+  
+const db = getFirestore();
 
-    let counter = await fs.readFileSync(path, 'utf8');
+type Counter = {
+    days: number
+}
 
-    await fs.writeFileSync(path, (++counter).toString(), { flag: 'w' });
-    
+async function addCounterInFirestore(): Promise<Counter> {
+    const docRef = db.collection('twitter-counters').doc('counter');
+
+    const counterDocData = await docRef.get();
+
+    const counter = counterDocData.data() as Counter; 
+
+    docRef.update({ days: ++counter.days });
+
     return counter;
 }
 
 async function createPost() {
-    const counter = await createOrReadCounterFile();
+    const counter = await addCounterInFirestore();
     
-    console.info(`Contador de Dias: ${counter} dias`);
+    console.info(`Contador de Dias: ${counter.days} dias`);
 
-    await agent.login({ identifier: process.env.BLUESKY_USER!, password: process.env.BLUESKY_PASSWORD!});
+   await agent.login({ identifier: process.env.BLUESKY_USER!, password: process.env.BLUESKY_PASSWORD!});
 
     await agent.post({
-        text: `Estamos a ${counter} dias sem o esgoto do Twitter/X`
+        text: `Estamos a ${counter.days} dias sem o esgoto do Twitter/X`
     });
-
 }
-const scheduleExpression = '0 0 0/24 * * *'; 
 
 createPost();
+
+const scheduleExpression = '0 0 0/24 * * *'; 
 
 const job = new CronJob(scheduleExpression, createPost);
 
